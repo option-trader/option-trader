@@ -29,12 +29,22 @@ function LoginInner() {
   const [upstoxConfigured, setUpstoxConfigured] = useState(false);
 
   const enterDemo = async () => {
-    await fetch("/api/auth/session", {
-      method: "POST",
-      body: JSON.stringify({ mode: "demo" }),
-      headers: { "Content-Type": "application/json" },
-    });
-    router.push("/dashboard");
+    setChecking(true);
+    try {
+      const res = await fetch("/api/auth/session", {
+        method: "POST",
+        body: JSON.stringify({ mode: "demo" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        // Small delay to ensure cookie is set before navigation
+        await new Promise((r) => setTimeout(r, 200));
+        router.push("/dashboard");
+      }
+    } catch {
+      // Fallback: navigate anyway — dashboard will check session
+      router.push("/dashboard");
+    }
   };
 
   useEffect(() => {

@@ -9,9 +9,6 @@ import { PRESETS, describeCondition, strategyForPreset } from "@/lib/conditions"
 const inr = (v) =>
   "₹" + Number(v).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
-// Memoized ControlPanel to prevent unnecessary re-renders
-export default memo(ControlPanel);
-
 const fade = {
   initial: { opacity: 0, y: -6 },
   animate: { opacity: 1, y: 0 },
@@ -19,7 +16,7 @@ const fade = {
   transition: { duration: 0.18 },
 };
 
-export default function ControlPanel({
+function ControlPanel({
   symbol,
   onSymbol,
   timeframe,
@@ -462,3 +459,5 @@ function Row({ k, v, cls = "" }) {
     </div>
   );
 }
+
+export default memo(ControlPanel);

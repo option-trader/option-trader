@@ -529,57 +529,58 @@ export default function Dashboard() {
 
       {/* chart + controls */}
       <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[1fr_300px]">
-        {/* Chart type tabs */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setChartType("NIFTY")}
-            className={`rounded-md border px-3 py-1.5 text-xs font-bold transition-colors ${
-              chartType === "NIFTY"
-                ? "border-gold bg-gold/15 text-gold"
-                : "border-ink-500 bg-ink-700 text-zinc-400 hover:border-zinc-500"
-            }`}
-          >
-            NIFTY
-          </button>
-          <button
-            onClick={() => setChartType("SENSEX")}
-            className={`rounded-md border px-3 py-1.5 text-xs font-bold transition-colors ${
-              chartType === "SENSEX"
-                ? "border-gold bg-gold/15 text-gold"
-                : "border-ink-500 bg-ink-700 text-zinc-400 hover:border-zinc-500"
-            }`}
-          >
-            SENSEX
-          </button>
-          {detectedPatterns.length > 0 && (
-            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold">
-              {detectedPatterns.length} patterns
-            </span>
-          )}
-        </div>
-
-        <div className="card-3d chart-tilt h-[420px] overflow-hidden rounded-xl border border-ink-500 bg-ink-800 lg:h-[520px]">
-          {chartType === "NIFTY" ? (
-            <Chart
-              candles={candles}
-              ma50={ma50}
-              ma200={ma200}
-              showMA={showMA}
-              signals={chartSignals}
-              levels={levels}
-              resetKey={`${symbol}:${timeframe}`}
-            />
-          ) : (
-            <Chart
-              candles={sensexCandles}
-              ma50={sensexMa50}
-              ma200={sensexMa200}
-              showMA={showMA}
-              signals={[]}
-              levels={[]}
-              resetKey={`SENSEX:${timeframe}`}
-            />
-          )}
+        <div className="card-3d overflow-hidden rounded-xl border border-ink-500 bg-ink-800">
+          {/* Chart type tabs */}
+          <div className="flex items-center gap-2 border-b border-ink-500 px-3 py-2">
+            <button
+              onClick={() => setChartType("NIFTY")}
+              className={`rounded-md border px-3 py-1.5 text-xs font-bold transition-colors ${
+                chartType === "NIFTY"
+                  ? "border-gold bg-gold/15 text-gold"
+                  : "border-ink-500 bg-ink-700 text-zinc-400 hover:border-zinc-500"
+              }`}
+            >
+              NIFTY
+            </button>
+            <button
+              onClick={() => setChartType("SENSEX")}
+              className={`rounded-md border px-3 py-1.5 text-xs font-bold transition-colors ${
+                chartType === "SENSEX"
+                  ? "border-gold bg-gold/15 text-gold"
+                  : "border-ink-500 bg-ink-700 text-zinc-400 hover:border-zinc-500"
+              }`}
+            >
+              SENSEX
+            </button>
+            {detectedPatterns.length > 0 && (
+              <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold">
+                {detectedPatterns.length} patterns
+              </span>
+            )}
+          </div>
+          <div className="chart-tilt h-[420px] lg:h-[520px]">
+            {chartType === "NIFTY" ? (
+              <Chart
+                candles={candles}
+                ma50={ma50}
+                ma200={ma200}
+                showMA={showMA}
+                signals={chartSignals}
+                levels={levels}
+                resetKey={`${symbol}:${timeframe}`}
+              />
+            ) : (
+              <Chart
+                candles={sensexCandles}
+                ma50={sensexMa50}
+                ma200={sensexMa200}
+                showMA={showMA}
+                signals={[]}
+                levels={[]}
+                resetKey={`SENSEX:${timeframe}`}
+              />
+            )}
+          </div>
         </div>
         <div className="lg:max-h-[520px] lg:overflow-y-auto lg:pr-1">
           <ControlPanel

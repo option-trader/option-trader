@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { STOCKS } from "@/lib/stocks";
 import { TIMEFRAMES } from "@/lib/timeframe";
@@ -8,6 +8,9 @@ import { PRESETS, describeCondition, strategyForPreset } from "@/lib/conditions"
 
 const inr = (v) =>
   "₹" + Number(v).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
+// Memoized ControlPanel to prevent unnecessary re-renders
+export default memo(ControlPanel);
 
 const fade = {
   initial: { opacity: 0, y: -6 },
@@ -37,6 +40,7 @@ export default function ControlPanel({
   position,
   onClosePosition,
   paused,
+  detectedPatterns,
 }) {
   const set = (patch) => onStrategy({ ...strategy, ...patch });
   const setCond = (side, patch) => set({ [side]: { ...strategy[side], ...patch } });
@@ -98,6 +102,21 @@ export default function ControlPanel({
           ))}
         </div>
       </section>
+
+      {/* Candlestick Patterns */}
+      {detectedPatterns && detectedPatterns.length > 0 && (
+        <section className="glass card-3d rounded-lg border-ink-500 p-3">
+          <label className="mb-2 block text-[11px] uppercase tracking-wider text-zinc-500">Patterns Detected</label>
+          <div className="space-y-1">
+            {detectedPatterns.slice(-3).reverse().map((p, i) => (
+              <div key={i} className="flex items-center gap-2 rounded-md bg-ink-700/60 px-2 py-1.5 text-[11px]">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                <span className="text-zinc-300">{p.text}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Mode tabs */}
       <section className="glass card-3d rounded-lg border-ink-500 p-3">

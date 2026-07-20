@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 
 // Smoothly animates toward `value` whenever it changes (count-up effect).
 // Uses rAF + ease-out; snaps instantly when prefers-reduced-motion.
@@ -35,7 +35,7 @@ function useCountUp(value, duration = 600) {
 const inr = (v) =>
   "₹" + Number(v).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-export default function StatsBar({ stats }) {
+export default memo(function StatsBar({ stats }) {
   const pnlCls = (v) => (v > 0 ? "text-bull glow-bull" : v < 0 ? "text-bear glow-bear" : "text-zinc-300");
   return (
     <div className="grid grid-cols-4 gap-2 lg:grid-cols-8" style={{ perspective: "1200px" }}>
@@ -49,7 +49,7 @@ export default function StatsBar({ stats }) {
       <Stat label="Avg Loss" value={stats.avgLoss} fmt={inr} cls="text-bear" />
     </div>
   );
-}
+});
 
 function Stat({ label, value, fmt, cls = "text-zinc-200" }) {
   const display = useCountUp(Number(value) || 0);

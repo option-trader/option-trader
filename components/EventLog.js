@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 const fmtTime = (ts) =>
   new Date(ts).toLocaleTimeString("en-IN", { hour12: false });
 
@@ -7,11 +9,11 @@ const fmtTime = (ts) =>
 const dotFor = (msg) => {
   if (msg.includes("BOUGHT") || msg.includes("BUY")) return "bg-bull";
   if (msg.includes("SOLD") || msg.includes("SELL") || msg.includes("STOP")) return "bg-bear";
-  if (msg.includes("Complete") || msg.includes("LOCKED") || msg.includes("AUTO")) return "bg-gold";
+  if (msg.includes("Complete") || msg.includes("LOCKED") || msg.includes("AUTO") || msg.includes("Pattern")) return "bg-gold";
   return "bg-zinc-600";
 };
 
-export default function EventLog({ events }) {
+export default memo(function EventLog({ events }) {
   return (
     <div className="card-3d glass flex h-full max-h-[240px] flex-col rounded-xl border border-ink-500 lg:max-h-none">
       <div className="border-b border-ink-500 px-3 py-2">
@@ -37,4 +39,4 @@ export default function EventLog({ events }) {
       </div>
     </div>
   );
-}
+});

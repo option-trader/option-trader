@@ -10,19 +10,65 @@ import { TradingEngine } from "@/lib/engine";
 import { sma } from "@/lib/indicators";
 import { aggregate, TIMEFRAMES } from "@/lib/timeframe";
 import { StrategyWatcher, describeCondition, rsi, strategyForPreset } from "@/lib/conditions";
+import { detectPatterns } from "@/lib/patterns";
 import ControlPanel from "@/components/ControlPanel";
 import StatsBar from "@/components/StatsBar";
 import TradeHistory from "@/components/TradeHistory";
 import EventLog from "@/components/EventLog";
 import SignalModal from "@/components/SignalModal";
 
-const Chart = dynamic(() => import("@/components/Chart"), { ssr: false });
+// Lazy load heavy chart component
+const Chart = dynamic(() => import("@/components/Chart"), {
+  ssr: false,
+  loading: () => <div className="flex h-full items-center justify-center text-zinc-500">Loading chart...</div>
+});
 
 // Seed enough 1-min history that MA200 is available even on the 1-hour
 // timeframe (200 hourly candles ≈ 12,000 minutes).
 const SEED_CANDLES = 12600;
 
 const inr = (v) => "₹" + Number(v).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
+// SENSEX mock simulator (simplified for index trading)
+class SensexSimulator {
+  constructor(base = 80000) {
+    this.price = base;
+    this.candles = [];
+    this.forming = null;
+    this.seedHistory(12600);
+  }
+
+  seedHistory(count) {
+    let price = this.price;
+    const now = Math.floor(Date.now() / 1000);
+    for (let i = 0; i < count; i++) {
+      const time = now - (count - i) * 60;
+      const open = price;
+      const change = (Math.random() - 0.5) * 40;
+      price = Math.max(price + change, 70000);
+      price = Math.min(price, 90000);
+      const high = Math.max(open, price) + Math.random() * 20;
+      const low = Math.min(open, price) - Math.random() * 20;
+      this.candles.push({ time, open, high, low, close: price, volume: Math.floor(50000 + Math.random() * 150000) });
+    }
+    this.price = price;
+  }
+
+  tick() {
+    const change = (Math.random() - 0.5) * 30;
+    this.price = Math.max(this.price + change, 70000);
+    this.price = Math.min(this.price, 90000);
+    this.forming = {
+      time: Math.floor(Date.now() / 1000),
+      open: this.candles[this.candles.length - 1]?.close || this.price,
+      high: this.price + Math.random() * 10,
+      low: this.price - Math.random() * 10,
+      close: this.price,
+      volume: Math.floor(Math.random() * 10000),
+    };
+    return { price: this.price };
+  }
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -36,6 +82,8 @@ export default function Dashboard() {
   const [tradingSymbol, setTradingSymbol] = useState(null); // symbol the active AUTO trade is locked to
   const [showMA, setShowMA] = useState(true);
   const [pendingSignal, setPendingSignal] = useState(null); // "ask me first" modal
+  const [chartType, setChartType] = useState("NIFTY"); // 'NIFTY' | 'SENSEX'
+  const [detectedPatterns, setDetectedPatterns] = useState([]);
   const [strategy, setStrategy] = useState(() => ({
     preset: "custom",
     ...strategyForPreset("custom", STOCKS[0].base),
@@ -61,6 +109,11 @@ export default function Dashboard() {
 
   if (!engineRef.current) engineRef.current = new TradingEngine({ capital: 500000, dailyLossLimit: 10000 });
   const engine = engineRef.current;
+
+  // SENSEX simulator instance
+  const sensexSimRef = useRef(null);
+  if (!sensexSimRef.current) sensexSimRef.current = new SensexSimulator();
+  const sensexSim = sensexSimRef.current;
 
   if (!dataSourceRef.current) {
     const ds = new MarketDataSource();
@@ -189,6 +242,9 @@ export default function Dashboard() {
         if (quotes) liveQuotesRef.current = quotes;
       });
 
+      // tick SENSEX simulator
+      sensexSimRef.current.tick();
+
       // tick every instantiated simulator so SL/TP covers all open positions.
       // When a live quote exists for a symbol, drive its candle builder with
       // the real price instead of the random walk.
@@ -242,6 +298,34 @@ export default function Dashboard() {
   const sim = getSim(symbol);
   const minutes = TIMEFRAMES.find((t) => t.key === timeframe)?.minutes || 1;
 
+  // SENSEX chart data
+  const sensexMinutes = TIMEFRAMES.find((t) => t.key === timeframe)?.minutes || 1;
+  const sensexBaseCandles = useMemo(() => {
+    return aggregate(sensexSim.candles, sensexMinutes);
+  }, [sensexSim.candles.length, sensexMinutes]);
+
+  const sensexCandles = useMemo(() => {
+    const f = sensexSim.forming;
+    if (!f) return sensexBaseCandles;
+    const span = sensexMinutes * 60;
+    const bucketTime = Math.floor(f.time / span) * span;
+    const last = sensexBaseCandles[sensexBaseCandles.length - 1];
+    if (last && last.time === bucketTime) {
+      return [...sensexBaseCandles.slice(0, -1), {
+        time: bucketTime,
+        open: last.open,
+        high: Math.max(last.high, f.high),
+        low: Math.min(last.low, f.low),
+        close: f.close,
+        volume: (last.volume || 0) + (f.volume || 0),
+      }];
+    }
+    return [...sensexBaseCandles, { ...f, time: bucketTime }];
+  }, [sensexBaseCandles, sensexMinutes, sensexSim.forming?.close, sensexSim.forming?.time]);
+
+  const sensexMa50 = useMemo(() => sma(sensexCandles, 50), [sensexCandles]);
+  const sensexMa200 = useMemo(() => sma(sensexCandles, 200), [sensexCandles]);
+
   // Heavy math (aggregate 12k candles + MA50/200 + RSI) recomputes only when a
   // 1-min candle FINALIZES (once a minute), not on every 1-second tick.
   const { baseCandles, ma50, ma200, rsiValue } = useMemo(() => {
@@ -274,6 +358,18 @@ export default function Dashboard() {
 
   const price = pricesRef.current[symbol];
   const stats = engine.stats(pricesRef.current);
+
+  // Detect candlestick patterns (memoized, only recalculates when candles change)
+  useEffect(() => {
+    const patterns = detectPatterns(candles);
+    setDetectedPatterns(patterns);
+
+    // Log detected patterns to EventLog
+    if (patterns.length > 0) {
+      const latest = patterns[patterns.length - 1];
+      engine._log(`📊 Pattern detected: ${latest.text} at ${inr(latest.time)}`);
+    }
+  }, [candles.length]); // Only recalculate when new candle is added
 
   const rawPosition = engine.positionFor(symbol);
   const position = rawPosition
@@ -433,16 +529,57 @@ export default function Dashboard() {
 
       {/* chart + controls */}
       <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[1fr_300px]">
+        {/* Chart type tabs */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setChartType("NIFTY")}
+            className={`rounded-md border px-3 py-1.5 text-xs font-bold transition-colors ${
+              chartType === "NIFTY"
+                ? "border-gold bg-gold/15 text-gold"
+                : "border-ink-500 bg-ink-700 text-zinc-400 hover:border-zinc-500"
+            }`}
+          >
+            NIFTY
+          </button>
+          <button
+            onClick={() => setChartType("SENSEX")}
+            className={`rounded-md border px-3 py-1.5 text-xs font-bold transition-colors ${
+              chartType === "SENSEX"
+                ? "border-gold bg-gold/15 text-gold"
+                : "border-ink-500 bg-ink-700 text-zinc-400 hover:border-zinc-500"
+            }`}
+          >
+            SENSEX
+          </button>
+          {detectedPatterns.length > 0 && (
+            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold">
+              {detectedPatterns.length} patterns
+            </span>
+          )}
+        </div>
+
         <div className="card-3d chart-tilt h-[420px] overflow-hidden rounded-xl border border-ink-500 bg-ink-800 lg:h-[520px]">
-          <Chart
-            candles={candles}
-            ma50={ma50}
-            ma200={ma200}
-            showMA={showMA}
-            signals={chartSignals}
-            levels={levels}
-            resetKey={`${symbol}:${timeframe}`}
-          />
+          {chartType === "NIFTY" ? (
+            <Chart
+              candles={candles}
+              ma50={ma50}
+              ma200={ma200}
+              showMA={showMA}
+              signals={chartSignals}
+              levels={levels}
+              resetKey={`${symbol}:${timeframe}`}
+            />
+          ) : (
+            <Chart
+              candles={sensexCandles}
+              ma50={sensexMa50}
+              ma200={sensexMa200}
+              showMA={showMA}
+              signals={[]}
+              levels={[]}
+              resetKey={`SENSEX:${timeframe}`}
+            />
+          )}
         </div>
         <div className="lg:max-h-[520px] lg:overflow-y-auto lg:pr-1">
           <ControlPanel
@@ -466,6 +603,7 @@ export default function Dashboard() {
           position={position}
           onClosePosition={handleClosePosition}
           paused={engine.paused}
+          detectedPatterns={detectedPatterns}
         />
         </div>
       </div>

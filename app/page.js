@@ -1,9 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import SiteNav from "@/components/SiteNav";
-import SiteFooter from "@/components/SiteFooter";
 import { Bolt, CandlestickChart, Shield, ArrowRight } from "@/components/Icons";
+import dynamic from "next/dynamic";
+
+const Scene3D = dynamic(() => import("@/components/Scene3D"), { ssr: false });
 
 export default function Landing() {
   return (
@@ -12,9 +15,14 @@ export default function Landing() {
 
       {/* ================= HERO ================= */}
       <section className="relative flex min-h-screen flex-col items-center justify-center px-4 pt-28">
-        <div className="hero-grid absolute inset-0" />
-        <div className="glow-orb left-[10%] top-[15%] h-96 w-96" style={{ backgroundColor: "rgba(212,175,55,0.1)" }} />
-        <div className="glow-orb right-[10%] top-[40%] h-80 w-80" style={{ backgroundColor: "rgba(212,175,55,0.05)" }} />
+        {/* 3D Background */}
+        <Suspense fallback={null}>
+          <Scene3D />
+        </Suspense>
+
+        {/* Fallback glow orbs (visible behind 3D) */}
+        <div className="glow-orb left-[10%] top-[15%] h-96 w-96" style={{ backgroundColor: "rgba(212,175,55,0.08)" }} />
+        <div className="glow-orb right-[10%] top-[40%] h-80 w-80" style={{ backgroundColor: "rgba(212,175,55,0.04)" }} />
 
         <div className="relative z-10 max-w-3xl text-center">
           <span
@@ -25,10 +33,10 @@ export default function Landing() {
             Paper trading free forever — no broker needed
           </span>
 
-          <h1 className="mt-6 text-4xl font-black leading-tight tracking-tight text-zinc-100 sm:text-6xl">
-            AutoTrade Bot
+          <h1 className="mt-6 text-4xl font-black leading-tight tracking-tight text-zinc-100 sm:text-6xl lg:text-7xl">
+            AutoTrade
             <br />
-            <span style={{ color: "#D4AF37" }}>Smart Trading</span>
+            <span className="text-gradient-gold">Bot</span>
           </h1>
 
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg">
@@ -39,10 +47,17 @@ export default function Landing() {
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href="/login?demo=1"
-              className="inline-flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-bold text-black transition-all duration-200 hover:opacity-90"
+              className="gold-glow btn-ripple inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-sm font-bold text-black transition-all duration-200 hover:scale-[1.03]"
               style={{ backgroundColor: "#D4AF37" }}
             >
-              Login with Upstox <ArrowRight width="16" height="16" />
+              Launch the Bot — Free <ArrowRight width="16" height="16" />
+            </Link>
+            <Link
+              href="/about"
+              className="inline-flex items-center gap-2 rounded-xl border px-7 py-3.5 text-sm font-semibold text-zinc-300 transition-all duration-200 hover:bg-white/5"
+              style={{ borderColor: "rgba(255,255,255,0.1)" }}
+            >
+              Learn More
             </Link>
           </div>
 
@@ -53,16 +68,33 @@ export default function Landing() {
 
         {/* 3D tilted dashboard mockup */}
         <div
-          className="card-3d relative z-10 mx-auto mb-[-60px] mt-14 w-full max-w-4xl rounded-2xl border p-3 shadow-2xl"
-          style={{ borderColor: "#333", backgroundColor: "#1a1a1a", transformPerspective: "1200px", transform: "rotateX(8deg)" }}
+          className="card-3d chart-tilt relative z-10 mx-auto mb-[-60px] mt-14 w-full max-w-4xl rounded-2xl border p-3 shadow-2xl"
+          style={{ borderColor: "#333", backgroundColor: "#1a1a1a" }}
         >
           <MockDashboard />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 rounded-b-2xl bg-gradient-to-t from-black to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 rounded-b-2xl bg-gradient-to-t from-[#0a0a0a] to-transparent" />
+        </div>
+      </section>
+
+      {/* ================= STATS BAR ================= */}
+      <section className="relative z-10 mx-auto max-w-5xl px-6 py-16">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {[
+            ["15", "Nifty 50 Stocks"],
+            ["₹5L", "Virtual Capital"],
+            ["60+", "Ticks / Minute"],
+            ["0", "Real Money at Risk"],
+          ].map(([num, label]) => (
+            <div key={label} className="card-3d rounded-2xl border p-5 text-center" style={{ borderColor: "#333", backgroundColor: "#111114" }}>
+              <div className="text-3xl font-black" style={{ color: "#D4AF37" }}>{num}</div>
+              <div className="mt-1 text-xs uppercase tracking-wider text-zinc-500">{label}</div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* ================= FEATURES ================= */}
-      <section className="relative mx-auto max-w-6xl px-6 pb-10 pt-36">
+      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-10 pt-12">
         <div className="text-center">
           <h2 className="text-3xl font-black tracking-tight text-zinc-100 sm:text-4xl">
             Everything you need.
@@ -91,7 +123,7 @@ export default function Landing() {
       </section>
 
       {/* ================= HOW IT WORKS ================= */}
-      <section className="relative mx-auto max-w-5xl px-6 py-20">
+      <section className="relative z-10 mx-auto max-w-5xl px-6 py-20">
         <h2 className="text-center text-3xl font-black tracking-tight text-zinc-100">
           Live in <span style={{ color: "#D4AF37" }}>three steps</span>
         </h2>
@@ -102,9 +134,44 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ================= CONDITION TYPES ================= */}
+      <section className="relative z-10 mx-auto max-w-5xl px-6 py-20">
+        <div className="text-center">
+          <h2 className="text-3xl font-black tracking-tight text-zinc-100 sm:text-4xl">
+            Build <span style={{ color: "#D4AF37" }}>any strategy</span>
+          </h2>
+          <p className="mx-auto mt-3 max-w-lg text-sm text-zinc-500">
+            From simple price alerts to complex multi-indicator conditions. The bot watches, you decide.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+          {[
+            { label: "Price Levels", desc: "Buy when price hits ₹1,650. Sell at ₹1,700. Simple, powerful." },
+            { label: "Moving Averages", desc: "MA50/MA200 crossover detection with configurable sensitivity." },
+            { label: "RSI Signals", desc: "Overbought/oversold conditions based on 14-period RSI." },
+            { label: "Volume Spikes", desc: "Detect unusual volume activity that precedes big moves." },
+          ].map((c) => (
+            <div
+              key={c.label}
+              className="card-3d card-3d-hover rounded-2xl border p-5"
+              style={{ borderColor: "#333", backgroundColor: "#111114" }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: "rgba(212,175,55,0.12)", color: "#D4AF37" }}>
+                  <Bolt width="14" height="14" />
+                </span>
+                <h3 className="text-sm font-bold text-zinc-100">{c.label}</h3>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-500">{c.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ================= FINAL CTA ================= */}
-      <section className="relative px-6 py-24">
-        <div className="glow-orb left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2" style={{ backgroundColor: "rgba(212,175,55,0.1)" }} />
+      <section className="relative z-10 px-6 py-24">
+        <div className="glow-orb left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2" style={{ backgroundColor: "rgba(212,175,55,0.08)" }} />
         <div className="relative z-10 mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-black tracking-tight text-zinc-100 sm:text-4xl">
             The market won&apos;t wait.
@@ -113,19 +180,19 @@ export default function Landing() {
           </h2>
           <Link
             href="/login?demo=1"
-            className="gold-glow mt-8 inline-flex items-center gap-2 rounded-xl px-8 py-4 text-sm font-bold text-black transition-all duration-200 hover:scale-[1.03]"
+            className="gold-glow btn-ripple mt-8 inline-flex items-center gap-2 rounded-xl px-8 py-4 text-sm font-bold text-black transition-all duration-200 hover:scale-[1.03]"
             style={{ backgroundColor: "#D4AF37" }}
           >
             Launch the Bot — Free <ArrowRight width="16" height="16" />
           </Link>
+          <p className="mt-4 text-xs text-zinc-600">No credit card. No broker account. Just you and the market.</p>
         </div>
       </section>
 
       {/* ================= FOOTER ================= */}
-      <footer className="border-t py-12" style={{ borderColor: "#333" }}>
+      <footer className="relative z-10 border-t py-12" style={{ borderColor: "#333" }}>
         <div className="mx-auto max-w-6xl px-6">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-            {/* Logo */}
             <div className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: "rgba(212,175,55,0.15)", color: "#D4AF37" }}>
                 <Bolt width="15" height="15" />
@@ -134,8 +201,6 @@ export default function Landing() {
                 AutoTrade<span style={{ color: "#D4AF37" }}>Bot</span>
               </span>
             </div>
-
-            {/* Links */}
             <div className="flex items-center gap-6 text-sm text-zinc-500">
               <Link href="/terms" className="transition-colors hover:text-zinc-100">Terms</Link>
               <Link href="/privacy" className="transition-colors hover:text-zinc-100">Privacy</Link>
@@ -143,7 +208,6 @@ export default function Landing() {
               <Link href="/about" className="transition-colors hover:text-zinc-100">About</Link>
             </div>
           </div>
-
           <div className="mt-8 border-t pt-6 text-center text-xs text-zinc-600" style={{ borderColor: "#333" }}>
             <span>© 2026 AutoTrade Bot. All rights reserved.</span>
             <span className="mx-2">·</span>
@@ -177,7 +241,7 @@ function Feature({ icon: Icon, title, text }) {
 
 function Step({ n, title, text }) {
   return (
-    <div className="relative rounded-2xl border p-6" style={{ borderColor: "#333", backgroundColor: "rgba(26,26,26,0.5)" }}>
+    <div className="card-3d relative rounded-2xl border p-6" style={{ borderColor: "#333", backgroundColor: "rgba(26,26,26,0.5)" }}>
       <span className="font-mono text-4xl font-black" style={{ color: "rgba(212,175,55,0.25)" }}>{n}</span>
       <h3 className="mt-2 text-base font-bold text-zinc-100">{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-zinc-500">{text}</p>
@@ -185,12 +249,10 @@ function Step({ n, title, text }) {
   );
 }
 
-/* A lightweight static mock of the dashboard for the hero visual */
 function MockDashboard() {
   const bars = [42, 55, 48, 62, 58, 70, 66, 78, 72, 84, 76, 88, 80, 92, 86, 74, 82, 90, 96, 88, 94, 100, 92, 98];
   return (
     <div className="overflow-hidden rounded-xl border" style={{ borderColor: "#333", backgroundColor: "#0a0a0a" }}>
-      {/* fake toolbar */}
       <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: "#333" }}>
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#ef4444" }} />
@@ -202,7 +264,6 @@ function MockDashboard() {
           <span className="h-1 w-1 animate-pulse rounded-full" style={{ backgroundColor: "#22c55e" }} /> LIVE
         </span>
       </div>
-      {/* fake chart */}
       <div className="relative flex h-56 items-end gap-[3px] px-4 pb-4 pt-6 sm:h-64">
         {bars.map((h, i) => {
           const up = i % 3 !== 0;
@@ -215,7 +276,6 @@ function MockDashboard() {
             </div>
           );
         })}
-        {/* level lines */}
         <div className="absolute inset-x-4 top-[28%] border-t border-dashed" style={{ borderColor: "rgba(239,68,68,0.6)" }}>
           <span className="absolute right-0 -top-2.5 rounded px-1.5 text-[9px] font-bold text-white" style={{ backgroundColor: "#ef4444" }}>SELL ₹1,700</span>
         </div>
@@ -223,7 +283,6 @@ function MockDashboard() {
           <span className="absolute right-0 -top-2.5 rounded px-1.5 text-[9px] font-bold text-white" style={{ backgroundColor: "#22c55e" }}>BUY ₹1,650</span>
         </div>
       </div>
-      {/* fake stats strip */}
       <div className="grid grid-cols-4 divide-x border-t text-center" style={{ borderColor: "#333", divideColor: "#333" }}>
         {[
           ["EQUITY", "₹5.24L", "#D4AF37"],
